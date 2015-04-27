@@ -1,0 +1,9 @@
+*** Settings ***
+Library         AardvarkLibrary
+
+
+
+*** Test Cases ***
+first test
+	open aardvark adapter    2237-922150
+	close adapter
