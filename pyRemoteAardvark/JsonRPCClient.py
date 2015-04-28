@@ -4,7 +4,7 @@ import JsonParser
 import JsonRpcMsg
 
 RECV_SIZE_MAX = 2048
-
+messageId = 0
   
 def find_json_object(objectName, jsonMsg):
   if(objectName in jsonMsg):
@@ -20,7 +20,7 @@ class JsonRPCClient(object):
       self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
       self.sock.connect((address,port))
-      self.messageId = 0
+      #self.messageId = 0
       self.encoder = JsonParser.Encoder()
       self.decoder = JsonParser.Decoder()
       
@@ -31,10 +31,14 @@ class JsonRPCClient(object):
       
       
     def send_request(self, methodName, params):
-      self.messageId = self.messageId+1
-      request = JsonRpcMsg.RequestObject(methodName, params, self.messageId)
+      #self.messageId = self.messageId+1
+      global messageId
+      messageId = messageId+1
+      request = JsonRpcMsg.RequestObject(methodName, params, messageId)
       encodedRequest = self.encoder.default(request)
-      self.sock.send(encodedRequest)
+      ret = self.sock.send(encodedRequest)
+      if(ret < 0):
+        print "Fehler beim Senden"
       encodedResponse = self.sock.recv(RECV_SIZE_MAX)
       
       response = self.decoder.default(encodedResponse)

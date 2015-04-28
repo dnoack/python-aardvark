@@ -18,10 +18,8 @@ import time
 import array
 import logging
 import sys
-import pyRemoteAardvark
 
 from .constants import *
-
 
 if sys.platform.startswith('linux'):
     try:
@@ -46,6 +44,7 @@ if not api:
     raise RuntimeError('Unable to find suitable binary interface. '
             'Unsupported platform?')
 
+          
 log = logging.getLogger(__name__)
 
 def error_string(error_number):
@@ -61,7 +60,7 @@ def _raise_error_if_negative(val):
 
 
         
-def find_devices(filter_in_use=True, remote=False):
+def find_devices(filter_in_use=True):
     """Return a list of port numbers which can be used with :func:`open`.
 
     If *filter_in_use* parameter is `True` devices which are already opened
@@ -79,21 +78,12 @@ def find_devices(filter_in_use=True, remote=False):
     
     # first fetch the number of attached devices, so we can create a buffer
     # with the exact amount of entries. api expects array of u16
-    if(remote):
-        remoteAardvark = pyRemoteAardvark.RemoteAardvark()
-        num_devices, devices = remoteAardvark.find_devices(0)
-        assert num_devices > 0
-    else:
-        num_devices = api.py_aa_find_devices(0, array.array('H'))
-        assert num_devices > 0
-        devices = array.array('H', (0,) * num_devices)
-    
-    if(remote):
-        num_devices, devices = remoteAardvark.find_devices(len(devices))
-    else:
-        num_devices = api.py_aa_find_devices(len(devices), devices)
+    num_devices = api.py_aa_find_devices(0, array.array('H'))
     assert num_devices > 0
+    devices = array.array('H', (0,) * num_devices)
     
+    num_devices = api.py_aa_find_devices(len(devices), devices)
+    assert num_devices > 0
     
     del devices[num_devices:]
 
@@ -104,7 +94,7 @@ def find_devices(filter_in_use=True, remote=False):
         
     return devices
 
-def open(port=None, serial_number=None, remote=True):
+def open(port=None, serial_number=None):
     """Open an aardvark device and return an :class:`Aardvark` object. If the
     device cannot be opened an :class:`IOError` is raised.
 
@@ -122,10 +112,10 @@ def open(port=None, serial_number=None, remote=True):
     exist, is already connected or an incompatible device is found.
     """
     if port is None and serial_number is None:
-        dev = Aardvark(0, remote)
+        dev = Aardvark(0)
     elif serial_number is not None:
-        for port in find_devices(True, remote):
-            dev = Aardvark(port, remote)
+        for port in find_devices(True):
+            dev = Aardvark(port)
             if dev.unique_id_str() == serial_number:
                 break
             dev.close()
@@ -140,13 +130,8 @@ class Aardvark(object):
     """Represents an Aardvark device."""
     BUFFER_SIZE = 65535
 
-    def __init__(self, port=0, remote=False):
-        self.remote = remote
-        if(remote):
-            self.remoteAardvark = pyRemoteAardvark.RemoteAardvark()
-            ret, ver = self.remoteAardvark.open_ext(port)
-        else:
-            ret, ver = api.py_aa_open_ext(port)
+    def __init__(self, port=0):
+        ret, ver = api.py_aa_open_ext(port)
             
         _raise_error_if_negative(ret)
 
@@ -205,22 +190,15 @@ class Aardvark(object):
 
     def close(self):
         """Close the device."""
-        if(self.remote):
-            self.remoteAardvark.close(self.handle)
-            self.handle = None
-        else:
-            api.py_aa_close(self.handle)
-            self.handle = None
+        api.py_aa_close(self.handle)
+        self.handle = None
 
     def unique_id(self):
         """Return the unique identifier of the device. The identifier is the
         serial number you can find on the adapter without the dash. Eg. the
         serial number 0012-345678 would be 12345678.
         """
-        if(self.remote):
-            return self.remoteAardvark.unique_id(self.handle)
-        else:
-            return api.py_aa_unique_id(self.handle)
+        return api.py_aa_unique_id(self.handle)
 
     def unique_id_str(self):
         """Return the unique identifier. But unlike :func:`unique_id`, the ID
@@ -290,19 +268,13 @@ class Aardvark(object):
 
         The power-on default value is 100 kHz.
         """
-        if(self.remote):
-            ret = self.remoteAardvark.i2c_bitrate(self.handle, 0)
-        else:
-            ret = api.py_aa_i2c_bitrate(self.handle, 0)
+        ret = api.py_aa_i2c_bitrate(self.handle, 0)
         _raise_error_if_negative(ret)
         return ret
 
     @i2c_bitrate.setter
     def i2c_bitrate(self, value):
-        if(self.remote):
-            ret = self.remoteAardvark.i2c_bitrate(self.handle, value)
-        else:
-            ret = api.py_aa_i2c_bitrate(self.handle, value)
+        ret = api.py_aa_i2c_bitrate(self.handle, value)
         _raise_error_if_negative(ret)
 
     @property
@@ -373,9 +345,11 @@ class Aardvark(object):
         """
 
         data = array.array('B', (0,) * length)
+        print length
         ret = api.py_aa_i2c_read(self.handle, addr, flags, length,
                 data)
         _raise_error_if_negative(ret)
+        print data
         del data[ret:]
         return data.tostring()
 
@@ -438,19 +412,13 @@ class Aardvark(object):
 
         The power-on default value is 1000 kHz.
         """
-        if(self.remote):
-            ret = self.remoteAardvark.spi_bitrate(self.handle, 0)
-        else:
-            ret = api.py_aa_spi_bitrate(self.handle, 0)
+        ret = api.py_aa_spi_bitrate(self.handle, 0)
         _raise_error_if_negative(ret)
         return ret
 
     @spi_bitrate.setter
     def spi_bitrate(self, value):
-        if(self.remote):
-            ret = self.remoteAardvark.spi_bitrate(self.handle, value)
-        else:
-            ret = api.py_aa_spi_bitrate(self.handle, value)
+        ret = api.py_aa_spi_bitrate(self.handle, value)
         _raise_error_if_negative(ret)
 
     def spi_configure(self, polarity, phase, bitorder):
