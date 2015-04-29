@@ -19,15 +19,18 @@ import array
 import sys
 import socket
 
+remoteAddress = 127.0.0.1
+remotePort = 0
+
 
 from JsonRPCClient import *
 
 class RemoteAardvarkAPI(object):
 
     def __init__(self, port=0):
-        self.rpc = JsonRPCClient()
+        self.rpc = JsonRPCClient(remoteAddress, remotePort)
 
-
+        
     def py_aa_find_devices(self, num_devices, devices):
         params = {"num_devices" : num_devices}
         response = self.rpc.send_request("Aardvark.aa_find_devices", params)
@@ -55,17 +58,20 @@ class RemoteAardvarkAPI(object):
         ver.append(find_json_object("api_req_by_sw", val))
         return ret, ver
 
+        
     def py_aa_close(self, handle):
         """Close the device."""
         params = {"Aardvark" : handle}
         self.rpc.send_request("Aardvark.aa_close", params)
         return None
         
+        
     def py_aa_unique_id(self, handle):
         params = {"Aardvark" : handle}
         response = self.rpc.send_request("Aardvark.aa_unique_id", params)
         uniqueId = find_json_object("result", response)
         return uniqueId
+        
         
     def py_aa_target_power(self, handle, value):
         params = {"Aardvark" : handle, "powerMask" : value}
@@ -74,13 +80,23 @@ class RemoteAardvarkAPI(object):
         returnCode = find_json_object("returnCode", returnCode)
         return returnCode
         
+        
     def py_aa_i2c_bitrate(self, handle, value):
         params = {"Aardvark" : handle, "bitrate" : value}
         response = self.rpc.send_request("Aardvark.aa_i2c_bitrate", params)
         returnCode = find_json_object("result", response)
         returnCode = find_json_object("returnCode", returnCode)
+        return returnCode 
+    
+    
+    def py_aa_i2c_slave_enable(self, handle, slave_addr, maxTxBytes, maxRxBytes):
+        params = {"Aardvark" : handle, "slave_addr": slave_addr, "maxTxBytes": maxTxBytes, "maxRxBytes": maxRxBytes}
+        response = self.rpc.send_request("Aardvark.aa_i2c_slave_enable", params)
+        returnCode = find_json_object("result", response)
+        returnCode = find_json_object("returnCode", returnCode)
         return returnCode
-        
+    
+    
     def py_aa_i2c_pullup(self, handle, value):
         params = {"Aardvark" : handle, "pullup_mask": value}
         response = self.rpc.send_request("Aardvark.aa_i2c_pullup", params)
@@ -88,12 +104,6 @@ class RemoteAardvarkAPI(object):
         returnCode = find_json_object("returnCode", returnCode)
         return returnCode
         
-    def py_aa_spi_bitrate(self, handle, value):
-        params = {"Aardvark" : handle, "bitrate" : value}
-        response = self.rpc.send_request("Aardvark.aa_spi_bitrate", params)
-        returnCode = find_json_object("result", response)
-        returnCode = find_json_object("returnCode", returnCode)
-        return returnCode
         
     def py_aa_i2c_write(self, handle, i2c_address, flags, len ,data):
         params = {"Aardvark": handle, "slave_addr" : i2c_address, "AardvarkI2cFlags" : flags, "data_out": data.tolist()}
@@ -109,9 +119,11 @@ class RemoteAardvarkAPI(object):
         val = find_json_object("result", response)
         returnCode = find_json_object("returnCode", val)
         data2 = find_json_object("data_in", val)
-        for i in range(len(data2)):
-            data[i] = data2[i]
-        
+        if(len(data2) <= length):
+            for i in range(len(data2)):
+                data[i] = data2[i]
+        else:
+            returnCode = -1
         return returnCode
     
         
@@ -129,9 +141,45 @@ class RemoteAardvarkAPI(object):
         returnCode = find_json_object("result", response)
         returnCode = find_json_object("returnCode", returnCode)
         return returnCode
+        
+        
+    def py_aa_spi_bitrate(self, handle, value):
+        params = {"Aardvark" : handle, "bitrate" : value}
+        response = self.rpc.send_request("Aardvark.aa_spi_bitrate", params)
+        returnCode = find_json_object("result", response)
+        returnCode = find_json_object("returnCode", returnCode)
+        return returnCode
+        
+        
+    def py_aa_async_poll(self, handle, timeout):
+        params = {"Aardvark" : handle, "timeout": timeout}
+        response = self.rpc.send_request("Aardvark.aa_async_poll", params)
+        returnCode = find_json_object("result", response)
+        returnCode = find_json_object("returnCode", returnCode)
+        return returnCode
+        
+        
+    def py_aa_spi_master_ss_polarity(self, handle, polarity):
+        params = {"Aardvark" : handle, "polarity": polarity}
+        response = self.rpc.send_request("Aardvark.aa_spi_master_ss_polarity", params)
+        returnCode = find_json_object("result", response)
+        returnCode = find_json_object("returnCode", returnCode)
+        return returnCode
+        
+        
+    def py_aa_spi_write(self, handle, length_out, data_out, length_in, data_in):
+        params = {"Aardvark": handle, "num_bytes" : num_bytes, "data_out" : data_out}
+        response = self.rpc.send_request("Aardvark.aa_spi_write", params)
+        val = find_json_object("result", response)
+        data2_in = find_json_object("data_in", val)
+        if(len(data2) <= length_in):
+            for i in range(length_in):
+                data_in[i] = data2[i]
+        else:
+            returnCode = -1
+        return returnCode
 
 
 from pyaardvark import *
 aardvark.api = RemoteAardvarkAPI()
-
 from pyaardvark import open, find_devices

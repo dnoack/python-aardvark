@@ -1,10 +1,26 @@
+# Copyright (c) 2015  Kontron Europe GmbH
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+
 import socket
 import json
 import JsonParser
 import JsonRpcMsg
 
 RECV_SIZE_MAX = 2048
-messageId = 0
   
 def find_json_object(objectName, jsonMsg):
   if(objectName in jsonMsg):
@@ -16,11 +32,11 @@ def find_json_object(objectName, jsonMsg):
 
 class JsonRPCClient(object):
   
-    def __init__(self, address=***REMOVED***, port= 1234):
+    def __init__(self, address="127.0.0.1", port= 1234):
       self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
       self.sock.connect((address,port))
-      #self.messageId = 0
+      self.messageId = 0
       self.encoder = JsonParser.Encoder()
       self.decoder = JsonParser.Decoder()
       
@@ -31,10 +47,8 @@ class JsonRPCClient(object):
       
       
     def send_request(self, methodName, params):
-      #self.messageId = self.messageId+1
-      global messageId
-      messageId = messageId+1
-      request = JsonRpcMsg.RequestObject(methodName, params, messageId)
+      self.messageId = self.messageId+1
+      request = JsonRpcMsg.RequestObject(methodName, params, self.messageId)
       encodedRequest = self.encoder.default(request)
       ret = self.sock.send(encodedRequest)
       if(ret < 0):
@@ -44,15 +58,3 @@ class JsonRPCClient(object):
       response = self.decoder.default(encodedResponse)
       return response
       
-      
-"""     
-test = JsonRPCClient("127.0.0.1", 1234)
-
-params = {"port" : 0}
-msg =test.send_request("Aardvark.aa_open", params)
-
-if("result" in msg):
-  if("Aardvark" in msg["result"]):
-    params = {"Aardvark" : msg["result"]["Aardvark"]}
-    test.send_request("Aardvark.aa_close", params)
-"""
