@@ -22,6 +22,7 @@ import JsonRpcMsg
 
 RECV_SIZE_MAX = 2048
   
+  
 def find_json_object(objectName, jsonMsg):
   if(objectName in jsonMsg):
     retValue = jsonMsg[objectName]
@@ -29,6 +30,7 @@ def find_json_object(objectName, jsonMsg):
     raise KeyError(val)
   return retValue
   
+ 
 
 class JsonRPCClient(object):
   
@@ -44,6 +46,11 @@ class JsonRPCClient(object):
     def __exit__(self):
       self.sock.close()
       self.sock = None
+    
+    
+    def close(self):
+        self.sock.close()
+        self.sock = None
       
       
     def send_request(self, methodName, params):
@@ -52,7 +59,7 @@ class JsonRPCClient(object):
       encodedRequest = self.encoder.default(request)
       ret = self.sock.send(encodedRequest)
       if(ret < 0):
-        print "Fehler beim Senden"
+        print "Could not send data over socket"
       encodedResponse = self.sock.recv(RECV_SIZE_MAX)
       
       response = self.decoder.default(encodedResponse)
