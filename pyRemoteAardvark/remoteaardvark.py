@@ -124,6 +124,19 @@ class RemoteAardvarkAPI(object):
         else:
             returnCode = -1
         return returnCode
+        
+        
+    def py_aa_i2c_slave_read(self, handle, data_length, data):
+        params = {"Aardvark": handle, "num_bytes": data_length}
+        response = self.rpc.send_request("Aardvark.aa_i2c_slave_read", params)
+        val = find_json_object("result", response)
+        address = find_json_object("slave_addr", val)
+        data2 = find_json_object("data_in", val)
+        if(len(data2) <= data_length):
+            for i in range(data_length):
+                data[i] = data2[i]
+        
+        return getReturnCode(val), address
     
         
     def py_aa_configure(self, handle, value):
