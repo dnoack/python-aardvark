@@ -16,19 +16,28 @@
 
 
 import socket
+import time
 import json
 import JsonParser
 import JsonRpcMsg
+from struct import *
 
-RECV_SIZE_MAX = 2048
-  
+
+TAG_FIELD_LENGTH = 1 
+LENGTH_FIELD_LENGTH = 4
+HEADER_FIELD_LENGTH = 5
+RECEIVEBUFFER_LENGTH = 2048
+TAG = 93
   
 def find_json_object(objectName, jsonMsg):
   if(objectName in jsonMsg):
     retValue = jsonMsg[objectName]
+    
+  if(retValue < 0):
+    #raise KeyError(retValue)
+    print objectName
   else:
-    raise KeyError(val)
-  return retValue
+    return retValue
   
  
 
@@ -51,17 +60,39 @@ class JsonRPCClient(object):
     def close(self):
         self.sock.close()
         self.sock = None
-      
+        
+    def makeHeader(self, value):
+        return pack('>BI', TAG, value)
+
+
+    def readHeader(self, header):
+        temp = unpack('>BI', header)
+        return temp[1]
+           
       
     def send_request(self, methodName, params):
+      header = []
       self.messageId = self.messageId+1
       request = JsonRpcMsg.RequestObject(methodName, params, self.messageId)
-      encodedRequest = self.encoder.default(request)
-      ret = self.sock.send(encodedRequest)
+      jsonRequest = self.encoder.default(request)
+      header = self.makeHeader(len(jsonRequest))
+      ret = self.sock.send(header)
+      if(ret < 0):
+        print "Could not send header over socket"
+      ret = self.sock.send(jsonRequest)
       if(ret < 0):
         print "Could not send data over socket"
-      encodedResponse = self.sock.recv(RECV_SIZE_MAX)
-      
-      response = self.decoder.default(encodedResponse)
+        
+      #Receive encoded message
+      jsonResponse = self.receiveEncodedMsg(self.sock)
+      response = self.decoder.default(jsonResponse)
       return response
+      
+    def receiveEncodedMsg(self, s):
+        data = s.recv(RECEIVEBUFFER_LENGTH)
+        header = self.readHeader(data[0:HEADER_FIELD_LENGTH])
+        while(header > len(data)+HEADER_FIELD_LENGTH):
+            temp = s.recv(RECEIVEBUFFER_LENGTH)	
+            data += temp
+        return data[HEADER_FIELD_LENGTH:header+HEADER_FIELD_LENGTH]
       
