@@ -45,7 +45,13 @@ class RemoteAardvarkAPI(object):
         response = self.rpc.send_request("Aardvark.aa_find_devices", params)
         val = find_json_object("result", response)
         num_devices = find_json_object("num_devices", val)
-        devices = find_json_object("devices", val)
+        tempDevices = find_json_object("devices", val)
+        
+        
+        if(len(tempDevices) <= len(devices)):
+            for i in range(num_devices):
+                devices[i] = tempDevices[i]
+  
         return num_devices
 
 
@@ -132,6 +138,7 @@ class RemoteAardvarkAPI(object):
         val = find_json_object("result", response)
         address = find_json_object("slave_addr", val)
         data2 = find_json_object("data_in", val)
+        
         if(len(data2) <= data_length):
             for i in range(data_length):
                 data[i] = data2[i]

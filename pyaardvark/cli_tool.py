@@ -21,7 +21,8 @@ import logging
 import argparse
 from functools import partial
 
-import pyaardvark
+#import pyaardvark
+import pyRemoteAardvark as pyaardvark
 
 int_base0 = partial(int, base=0)
 
@@ -67,7 +68,9 @@ def spi(a, args):
     print(' '.join('%02x' % ord(c) for c in data))
 
 def scan(a, args):
-    for port in pyaardvark.find_devices():
+    devices = pyaardvark.find_devices()
+
+    for port in devices:
         dev = pyaardvark.open(port)
         print('Device #%d: %s' % (port, dev.unique_id_str()))
         dev.close()
